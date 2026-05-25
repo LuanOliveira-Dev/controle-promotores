@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portaria - Registro de Acesso com Foto e GPS</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            --success-color: #16a34a;
+            --error-color: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .totem-container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 25px;
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #0f172a;
+            text-align: center;
+        }
+
+        /* Container da Câmera */
+        .camera-container {
+            width: 100%;
+            height: 240px;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Espelha a imagem para visualização natural */
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #334155;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 20px;
+            text-align: center;
+            letter-spacing: 1px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background-color: var(--primary-color);
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .feedback-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+            font-size: 14px;
+            white-space: pre-line;
+        }
+
+        .feedback-success { background-color: #dcfce7; color: var(--success-color); border: 1px solid #bbf7d0; }
+        .feedback-error { background-color: #fee2e2; color: var(--error-color); border: 1px solid #fecaca; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Canvas oculto para capturar a imagem */
+        #canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="totem-container">
+        <header>
+            <h1>Sistema de Controle de Promotores</h1>
+            <p>Totem de Autoatendimento</p>
+        </header>
+
+        <div class="card">
+            <h2>📍 Registrar Entrada ou Saída</h2>
+            
+            <div class="camera-container">
+                <span class="camera-overlay">Reconhecimento Ativo</span>
+                <video id="video" autoplay playsinline muted></video>
+            </div>
+
+            <form id="formAcesso">
+                <div class="form-group">
+                    <label for="cpfAcesso">CPF do Promotor</label>
+                    <input type="text" id="cpfAcesso" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" autocomplete="off" autofocus required>
+                </div>
+                <button type="submit" id="btnRegistrar">Confirmar Identificação</button>
+            </form>
+
+            <div id="feedback" class="feedback-message"></div>
+        </div>
+    </div>
+
+    <canvas id="canvas" width="320" height="240"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const formAcesso = document.getElementById('formAcesso');
+        const btnRegistrar = document.getElementById('btnRegistrar');
+
+        // Inicializa a câmera
+        async function iniciarCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 320, height: 240, facingMode: "user" }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Erro ao acessar a câmera: ", err);
+                exibirFeedback("⚠️ Atenção: Câmera não detectada ou permissão negada. O registro continuará sem foto.", "error");
+            }
+        }
+
+        // Tira o frame da foto e converte para string comprimida (JPEG 0.6)
+        function capturarFoto() {
+            if (!video.srcObject) return null;
+            const context = canvas.getContext('2d');
+            
+            // Corrige o espelhamento para salvar a foto na orientação correta
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            context.setTransform(1, 0, 0, 1, 0, 0); 
+            
+            return canvas.toDataURL('image/jpeg', 0.6); 
+        }
+
+        // Pega as coordenadas geográficas por GPS do Navegador
+        function obterLocalizacao() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ latitude: null, longitude: null, erro: "Não suportado" });
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            erro: null
+                        });
+                    },
+                    (error) => {
+                        resolve({ latitude: null, longitude: null, erro: error.message });
+                    },
+                    { timeout: 5000, enableHighAccuracy: true }
+                );
+            });
+        }
+
+        function obterDados() {
+            const promotores = JSON.parse(localStorage.getItem('db_promotores')) || [];
+            const acessos = JSON.parse(localStorage.getItem('db_acessos')) || [];
+            return { promotores, acessos };
+        }
+
+        function salvarDados(promotores, acessos) {
+            localStorage.setItem('db_promotores', JSON.stringify(promotores));
+            localStorage.setItem('db_acessos', JSON.stringify(acessos));
+        }
+
+        function exibirFeedback(mensagem, tipo) {
+            const feedbackDiv = document.getElementById('feedback');
+            feedbackDiv.innerText = message = mensagem;
+            feedbackDiv.className = `feedback-message feedback-${tipo}`;
+            feedbackDiv.style.display = 'block';
+            setTimeout(() => { feedbackDiv.style.display = 'none'; }, 5000);
+        }
+
+        // Máscara do CPF dinâmica
+        document.getElementById('cpfAcesso').addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.substring(0, 11);
+            v = v.replace(/(\d{3})(\d)/, "$1.$2");
+            v = v.replace(/(\d{3})(\d)/, "$1.$2");
+            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            e.target.value = v;
+        });
+
+        // Envio do Formulário
+        formAcesso.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            btnRegistrar.disabled = true; // Previne cliques repetidos
+            
+            const cpfLimpo = document.getElementById('cpfAcesso').value.replace(/\D/g, ''); 
+            const { promotores, acessos } = obterDados();
+
+            const promotor = promotores.find(p => p.cpf.replace(/\D/g, '') === cpfLimpo);
+            
+            if (!promotor) {
+                exibirFeedback("❌ Erro: CPF não localizado!\nSolicite seu cadastro na administração.", "error");
+                btnRegistrar.disabled = false;
+                return;
+            }
+
+            const horarioAtual = new Date().toLocaleString('pt-BR');
+            
+            // Coleta paralela de evidências de segurança
+            const fotoCapturada = capturarFoto();
+            const localizacao = await obterLocalizacao();
+
+            const acessoAberto = acessos.find(a => a.promotor_id === promotor.id && a.saida === null);
+
+            if (acessoAberto) {
+                // Registro de Saída
+                acessoAberto.saida = horarioAtual;
+                acessoAberto.saida_foto = fotoCapturada;
+                acessoAberto.saida_gps = localizacao;
+                
+                exibirFeedback(`👋 Até logo, ${promotor.nome}!\nSaída registrada com sucesso.`, "success");
+            } else {
+                // Registro de Entrada
+                const novoAcesso = {
+                    id: Date.now(),
+                    promotor_id: promotor.id,
+                    entrada: horarioAtual,
+                    entrada_foto: fotoCapturada,
+                    entrada_gps: localizacao,
+                    saida: null,
+                    saida_foto: null,
+                    saida_gps: null
+                };
+                acessos.push(novoAcesso);
+                
+                exibirFeedback(`🚀 Entrada autorizada!\nBem-vindo(a), ${promotor.nome}.`, "success");
+            }
+
+            salvarDados(promotores, acessos);
+            
+            formAcesso.reset();
+            btnRegistrar.disabled = false;
+            document.getElementById('cpfAcesso').focus(); // Mantém o foco no input
+        });
+
+        // Inicia a câmera ao carregar o arquivo
+        iniciarCamera();
+    </script>
+</body>
+</html>
